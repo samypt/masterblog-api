@@ -1,10 +1,23 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
+from datetime import datetime
 
 POSTS = [
-    {"id": 1, "title": "First post", "content": "This is the first post."},
-    {"id": 2, "title": "Second post", "content": "This is the second post."},
+    {
+        "id": 1,
+        "title": "My First Blog Post",
+        "content": "This is the content of my first blog post.",
+        "author": "Your Name",
+        "date": "2023-06-07"
+    },
+    {
+        "id": 2,
+        "title": "My Second Blog Post",
+        "content": "This is the content of my second blog post.",
+        "author": "Your Name",
+        "date": "2023-06-08"
+    },
 ]
 
 app = Flask(__name__)
@@ -34,7 +47,8 @@ def handle_posts():
         data = request.get_json()
 
         # Validate the presence of 'title' and 'content'
-        if not data or not data.get('title') or not data.get('content'):
+        if (not data or not data.get('title') or not data.get('content')
+                or not data.get('author')):
             return jsonify({"error": "Both 'title' and 'content' are required."}), 400
 
         # Create a new post with the next available ID
@@ -42,6 +56,8 @@ def handle_posts():
             'id': max((post['id'] for post in POSTS), default=0) + 1,
             'title': data['title'],
             'content': data['content'],
+            'author': data['author'],
+            'date': datetime.now().strftime('%Y-%m-%d'),
         }
         POSTS.append(new_post)
         return jsonify({"message": "Post created", "post": new_post}), 201
@@ -52,7 +68,7 @@ def handle_posts():
         reverse_direction = request.args.get('direction', '').strip().lower() == 'desc'
 
         # Sort only if the 'sort' field is valid
-        if sort in ['id', 'title', 'content']:
+        if sort in ['id', 'title', 'content', 'author', 'date']:
             try:
                 sorted_posts = sorted(
                     POSTS,
@@ -91,18 +107,26 @@ def handle_post(id):
 @app.route('/api/posts/search', methods=['GET'])
 def search_posts():
     # Get the search term from query parameters
-    title = request.args.get('title', '').lower()
-    content = request.args.get('content', '').lower()
+    query_params = {
+        'title': request.args.get('title', '').lower(),
+        'content': request.args.get('content', '').lower(),
+        'author': request.args.get('author', '').lower(),
+        'date': request.args.get('date', '').lower()
+    }
 
     # If no query is provided, return all posts
-    if not title and not content:
+    if not any(query_params.values()):
         return jsonify(POSTS), 200
 
     # Filter posts by title or content matching the query
     results = [
         post for post in POSTS
-            if (title and title in post['title'].lower())
-               or (content and content in post['content'].lower())
+        if (
+                (query_params['title'] and query_params['title'] in post['title'].lower()) or
+                (query_params['content'] and query_params['content'] in post['content'].lower()) or
+                (query_params['author'] and query_params['author'] in post['author'].lower()) or
+                (query_params['date'] and query_params['date'] in post['date'].lower())
+        )
     ]
 
     return jsonify(results), 200

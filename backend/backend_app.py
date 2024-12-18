@@ -55,6 +55,29 @@ def handle_post(id):
         return jsonify({"message": "Post updated", "post": post}), 200
 
 
+@app.route('/api/posts/search', methods=['GET'])
+def search_posts():
+    # Get the search term from query parameters
+    title = request.args.get('title', '').lower()
+    content = request.args.get('content', '').lower()
+    print(title, 'here my search')
+    print(content, 'here my search')
+
+    # If no query is provided, return all posts
+    if not title and not content:
+        print('im here')
+        return jsonify(POSTS), 200
+
+    # Filter posts by title or content matching the query
+    results = [
+        post for post in POSTS
+            if (title and title in post['title'].lower())
+               or (content and content in post['content'].lower())
+    ]
+
+    return jsonify(results), 200
+
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5002, debug=True)
 

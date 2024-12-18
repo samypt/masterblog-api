@@ -2,23 +2,10 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 from datetime import datetime
+import json
 
-POSTS = [
-    {
-        "id": 1,
-        "title": "My First Blog Post",
-        "content": "This is the content of my first blog post.",
-        "author": "Your Name",
-        "date": "2023-06-07"
-    },
-    {
-        "id": 2,
-        "title": "My Second Blog Post",
-        "content": "This is the content of my second blog post.",
-        "author": "Your Name",
-        "date": "2023-06-08"
-    },
-]
+
+JSON_PATH = 'posts.json'
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
@@ -37,12 +24,68 @@ swagger_ui_blueprint = get_swaggerui_blueprint(
 app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 
 
+def load_data():
+    """
+    Loads data from the JSON file specified by JSON_PATH.
+
+    Returns:
+        list: A list of posts if the file exists and contains valid JSON.
+        dict: An empty list if the file is missing, empty, or corrupted.
+    """
+    try:
+        with open(JSON_PATH, 'r', encoding='utf-8') as file:
+            print(f"Data successfully read from {JSON_PATH}.")
+            return json.load(file)
+    except FileNotFoundError:
+        print(f"File not found: {JSON_PATH}. Creating a new empty database.")
+        return []
+    except json.JSONDecodeError:
+        print("Error: Failed to decode JSON. The file might be empty or corrupted.")
+        return []
+    except Exception as e:
+        print(f"An unexpected error occurred while loading data: {e}")
+        return []
+
+
+def get_data():
+    """
+    Provides cached access to the data from the JSON file.
+    Loads data from the file if it is not already cached.
+
+    Returns:
+        list: The cached data loaded from the JSON file.
+    """
+    if not hasattr(get_data, "_cache"):
+        get_data._cache = load_data()
+    return get_data._cache
+
+
+def save_data(data):
+    """
+    Saves the provided data to the JSON file specified by JSON_PATH.
+
+    Args:
+        data (list): The list of posts to save.
+
+    Returns:
+        None
+    """
+    try:
+        with open(JSON_PATH, 'w', encoding='utf-8') as file:
+            json.dump(data, file, indent=4)
+            print(f"Data successfully saved to {JSON_PATH}.")
+    except Exception as e:
+        print(f"Error: An unexpected error occurred while saving data: {e}")
+
+
 def fetch_post(id):
-    return next((post for post in POSTS if post['id'] == id), None)
+    data = get_data()
+    return next((post for post in data if post['id'] == id), None)
 
 
 @app.route('/api/posts', methods=['GET', 'POST'])
 def handle_posts():
+    data = get_data()
     if request.method == 'POST':
         data = request.get_json()
 
@@ -53,13 +96,14 @@ def handle_posts():
 
         # Create a new post with the next available ID
         new_post = {
-            'id': max((post['id'] for post in POSTS), default=0) + 1,
+            'id': max((post['id'] for post in data), default=0) + 1,
             'title': data['title'],
             'content': data['content'],
             'author': data['author'],
             'date': datetime.now().strftime('%Y-%m-%d'),
         }
-        POSTS.append(new_post)
+        data.append(new_post)
+        save_data(data)
         return jsonify({"message": "Post created", "post": new_post}), 201
 
     elif request.method == 'GET':
@@ -71,7 +115,7 @@ def handle_posts():
         if sort in ['id', 'title', 'content', 'author', 'date']:
             try:
                 sorted_posts = sorted(
-                    POSTS,
+                    data,
                     key=lambda post: post[sort].lower()
                     if isinstance(post[sort], str) else post[sort],
                     reverse=reverse_direction
@@ -81,31 +125,35 @@ def handle_posts():
                 return jsonify({"error": f"Invalid sort field: {sort}"}), 400
 
     # Default: Return all posts
-    return jsonify(POSTS), 200
+    return jsonify(data), 200
 
 
 @app.route('/api/posts/<int:id>', methods=['DELETE', 'PUT'])
 def handle_post(id):
+    data = get_data()
     post = fetch_post(id)
     if not post:
         return jsonify({"error": "Post ID not found"}), 404
 
     if request.method == 'DELETE':
-        POSTS.remove(post)
+        data.remove(post)
+        save_data(data)
         return jsonify({"message": f"Post with ID {id} has been deleted successfully."}), 200
 
     if request.method == 'PUT':
-        data = request.get_json()
-        if not data:
+        new_post = request.get_json()
+        if not new_post:
             return jsonify({"error": "No data provided"}), 400
 
         # Update only non-None, valid fields
-        post.update({key: value for key, value in data.items() if key and value})
+        post.update({key: value for key, value in new_post.items() if key and value})
+        save_data(data)
         return jsonify({"message": "Post updated", "post": post}), 200
 
 
 @app.route('/api/posts/search', methods=['GET'])
 def search_posts():
+    data = get_data()
     # Get the search term from query parameters
     query_params = {
         'title': request.args.get('title', '').lower(),
@@ -116,11 +164,11 @@ def search_posts():
 
     # If no query is provided, return all posts
     if not any(query_params.values()):
-        return jsonify(POSTS), 200
+        return jsonify(data), 200
 
     # Filter posts by title or content matching the query
     results = [
-        post for post in POSTS
+        post for post in data
         if (
                 (query_params['title'] and query_params['title'] in post['title'].lower()) or
                 (query_params['content'] and query_params['content'] in post['content'].lower()) or

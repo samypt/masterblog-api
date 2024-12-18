@@ -1,0 +1,16 @@
+[
+    {
+        "id": 1,
+        "title": "My First Blog Post",
+        "content": "This is the content of my first blog post.",
+        "author": "Your Name",
+        "date": "2024-12-17"
+    },
+    {
+        "id": 2,
+        "title": "My Second Blog Post",
+        "content": "This is the content of my second blog post.",
+        "author": "Your Name",
+        "date": "2024-12-18"
+    }
+]

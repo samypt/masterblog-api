@@ -24,14 +24,34 @@ def handle_posts():
         if not data or not data.get('title') or not data.get('content'):
             return jsonify({"error": "Both 'title' and 'content' are required."}), 400
 
+        # Create a new post with the next available ID
         new_post = {
-            'id': max(post['id'] for post in POSTS) + 1,  # Find the next available ID
+            'id': max((post['id'] for post in POSTS), default=0) + 1,
             'title': data['title'],
             'content': data['content'],
         }
         POSTS.append(new_post)
         return jsonify({"message": "Post created", "post": new_post}), 201
 
+    elif request.method == 'GET':
+        # Get query parameters for sorting
+        sort = request.args.get('sort', '').strip().lower()
+        reverse_direction = request.args.get('direction', '').strip().lower() == 'desc'
+
+        # Sort only if the 'sort' field is valid
+        if sort in ['id', 'title', 'content']:
+            try:
+                sorted_posts = sorted(
+                    POSTS,
+                    key=lambda post: post[sort].lower()
+                    if isinstance(post[sort], str) else post[sort],
+                    reverse=reverse_direction
+                )
+                return jsonify(sorted_posts), 200
+            except KeyError:
+                return jsonify({"error": f"Invalid sort field: {sort}"}), 400
+
+    # Default: Return all posts
     return jsonify(POSTS), 200
 
 
@@ -60,12 +80,9 @@ def search_posts():
     # Get the search term from query parameters
     title = request.args.get('title', '').lower()
     content = request.args.get('content', '').lower()
-    print(title, 'here my search')
-    print(content, 'here my search')
 
     # If no query is provided, return all posts
     if not title and not content:
-        print('im here')
         return jsonify(POSTS), 200
 
     # Filter posts by title or content matching the query

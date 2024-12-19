@@ -12,5 +12,12 @@
         "content": "This is the content of my second blog post.",
         "author": "Your Name",
         "date": "2024-12-18"
+    },
+    {
+        "id": 4,
+        "title": "Edited title",
+        "content": "Edited content",
+        "author": "Edited Author",
+        "date": "2024-12-19"
     }
 ]

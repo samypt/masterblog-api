@@ -74,7 +74,7 @@ body {
     color: #333;
 }
 
-.post button {
+.post .delete-button {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -86,6 +86,85 @@ body {
     cursor: pointer;
 }
 
-.post button:hover {
+.post .update-button {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    background-color: #4466ee;
+    color: #fff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.post .delete-button:hover {
+    background-color: #cc0000;
+}
+.post .update-button:hover {
+    background-color: #3355dd;
+}
+
+
+.post-edit-mode {
+    padding: 20px;
+    background-color: #fff;
+    border: 2px solid #4466ee;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.post-edit-mode input,
+.post-edit-mode textarea {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.post-edit-mode input:focus,
+.post-edit-mode textarea:focus {
+    outline: none;
+    border-color: #4466ee;
+    box-shadow: 0px 4px 15px rgba(68, 102, 238, 0.5);
+}
+
+.post-edit-mode textarea {
+    resize: none;
+    height: 100px;
+}
+
+.post-edit-mode .save-button,
+.post-edit-mode .cancel-button {
+    margin-right: 10px;
+    height: 40px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.post-edit-mode .save-button {
+    display: inline-flex;
+    background-color: #28a745;
+    color: #fff;
+}
+
+.post-edit-mode .save-button:hover {
+    background-color: #218838;
+}
+
+.post-edit-mode .cancel-button {
+    background-color: #ff4444;
+    color: #fff;
+}
+
+.post-edit-mode .cancel-button:hover {
     background-color: #cc0000;
 }

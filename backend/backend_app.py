@@ -10,15 +10,14 @@ JSON_PATH = 'posts.json'
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
 
-
-SWAGGER_URL="/api/docs"  # (1) swagger endpoint e.g. HTTP://localhost:5002/api/docs
-API_URL="/static/masterblog.json" # (2) ensure you create this dir and file
+SWAGGER_URL = "/api/docs"  # (1) Swagger endpoint e.g. HTTP://localhost:5002/api/docs
+API_URL = "/static/masterblog.json"  # (2) Ensure you create this dir and file
 
 swagger_ui_blueprint = get_swaggerui_blueprint(
     SWAGGER_URL,
     API_URL,
     config={
-        'app_name': 'Masterblog API' # (3) You can change this if you like
+        'app_name': 'Masterblog API'  # (3) You can change this if you like
     }
 )
 app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
@@ -26,7 +25,7 @@ app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 
 def load_data():
     """
-    Loads data from the JSON file specified by JSON_PATH.
+    Load data from the JSON file specified by JSON_PATH.
 
     Returns:
         list: A list of posts if the file exists and contains valid JSON.
@@ -49,7 +48,7 @@ def load_data():
 
 def get_data():
     """
-    Provides cached access to the data from the JSON file.
+    Provide cached access to the data from the JSON file.
     Loads data from the file if it is not already cached.
 
     Returns:
@@ -62,7 +61,7 @@ def get_data():
 
 def save_data(data):
     """
-    Saves the provided data to the JSON file specified by JSON_PATH.
+    Save the provided data to the JSON file specified by JSON_PATH.
 
     Args:
         data (list): The list of posts to save.
@@ -79,27 +78,57 @@ def save_data(data):
 
 
 def fetch_post(id):
+    """
+    Retrieve a post by its ID.
+
+    Args:
+        id (int): The ID of the post to fetch.
+
+    Returns:
+        dict: The post with the specified ID, or None if not found.
+    """
     data = get_data()
     return next((post for post in data if post['id'] == id), None)
 
 
 @app.route('/api/posts', methods=['GET', 'POST'])
 def handle_posts():
+    """
+    Handle GET and POST requests for blog posts.
+
+    GET:
+        Retrieve a list of posts, optionally sorted by a specified field and direction.
+
+        Query Parameters:
+            - sort (str): Field to sort by ('id', 'title', 'content', 'author', 'date').
+            - direction (str): Sort direction ('asc' or 'desc').
+
+    POST:
+        Create a new post with the provided title, content, and author.
+
+        Request Body:
+            - title (str): The title of the post.
+            - content (str): The content of the post.
+            - author (str): The author of the post.
+
+    Returns:
+        - 200: A list of posts (GET).
+        - 201: The newly created post (POST).
+        - 400: Validation error or invalid sort field.
+    """
     data = get_data()
     if request.method == 'POST':
-        data = request.get_json()
+        post_data = request.get_json()
 
-        # Validate the presence of 'title' and 'content'
-        if (not data or not data.get('title') or not data.get('content')
-                or not data.get('author')):
-            return jsonify({"error": "Both 'title' and 'content' are required."}), 400
+        if (not post_data or not post_data.get('title') or not post_data.get('content')
+                or not post_data.get('author')):
+            return jsonify({"error": "All the fields 'title', 'content' and 'author' are required."}), 400
 
-        # Create a new post with the next available ID
         new_post = {
             'id': max((post['id'] for post in data), default=0) + 1,
-            'title': data['title'],
-            'content': data['content'],
-            'author': data['author'],
+            'title': post_data['title'],
+            'content': post_data['content'],
+            'author': post_data['author'],
             'date': datetime.now().strftime('%Y-%m-%d'),
         }
         data.append(new_post)
@@ -107,11 +136,9 @@ def handle_posts():
         return jsonify({"message": "Post created", "post": new_post}), 201
 
     elif request.method == 'GET':
-        # Get query parameters for sorting
         sort = request.args.get('sort', '').strip().lower()
         reverse_direction = request.args.get('direction', '').strip().lower() == 'desc'
 
-        # Sort only if the 'sort' field is valid
         if sort in ['id', 'title', 'content', 'author', 'date']:
             try:
                 sorted_posts = sorted(
@@ -124,12 +151,33 @@ def handle_posts():
             except KeyError:
                 return jsonify({"error": f"Invalid sort field: {sort}"}), 400
 
-    # Default: Return all posts
     return jsonify(data), 200
 
 
 @app.route('/api/posts/<int:id>', methods=['DELETE', 'PUT'])
 def handle_post(id):
+    """
+    Handle DELETE and PUT requests for a specific blog post.
+
+    DELETE:
+        Remove the post with the specified ID.
+
+    PUT:
+        Update the fields of the post with the specified ID.
+
+        Request Body:
+            - title (str): Updated title of the post.
+            - content (str): Updated content of the post.
+            - author (str): Updated author of the post.
+
+    Args:
+        id (int): The ID of the post to handle.
+
+    Returns:
+        - 200: Success message or updated post data.
+        - 400: Validation error or invalid input.
+        - 404: Post not found.
+    """
     data = get_data()
     post = fetch_post(id)
     if not post:
@@ -145,7 +193,6 @@ def handle_post(id):
         if not new_post:
             return jsonify({"error": "No data provided"}), 400
 
-        # Update only non-None, valid fields
         post.update({key: value for key, value in new_post.items() if key and value})
         save_data(data)
         return jsonify({"message": "Post updated", "post": post}), 200
@@ -153,8 +200,19 @@ def handle_post(id):
 
 @app.route('/api/posts/search', methods=['GET'])
 def search_posts():
+    """
+    Search for blog posts based on query parameters.
+
+    Query Parameters:
+        - title (str): Search term for the post title.
+        - content (str): Search term for the post content.
+        - author (str): Search term for the post author.
+        - date (str): Search term for the post date (YYYY-MM-DD).
+
+    Returns:
+        - 200: A list of posts matching the search criteria.
+    """
     data = get_data()
-    # Get the search term from query parameters
     query_params = {
         'title': request.args.get('title', '').lower(),
         'content': request.args.get('content', '').lower(),
@@ -162,11 +220,9 @@ def search_posts():
         'date': request.args.get('date', '').lower()
     }
 
-    # If no query is provided, return all posts
     if not any(query_params.values()):
         return jsonify(data), 200
 
-    # Filter posts by title or content matching the query
     results = [
         post for post in data
         if (
@@ -182,4 +238,3 @@ def search_posts():
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5002, debug=True)
-
